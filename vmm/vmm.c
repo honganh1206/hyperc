@@ -17,8 +17,8 @@
 // 16 KiB space reserved for kernel stack
 #define KERNEL_STACK_SIZE (0x4000)
 
-// setup_paging() and init_pagetable() in kernel/mm/translate.c uses 5 pages in total
-// 1 for PML4, 1 for PDPT, 1 for page directory, 2 for page tables
+// setup_paging() and init_pagetable() in kernel/mm/translate.c uses 5 pages in
+// total 1 for PML4, 1 for PDPT, 1 for page directory, 2 for page tables
 #define PAGE_TABLE_SIZE (0x5000)
 // Raw kernel image size
 #define MAX_KERNEL_SIZE (PS_LIMIT - PAGE_TABLE_SIZE - KERNEL_STACK_SIZE)
