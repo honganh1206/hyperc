@@ -12,6 +12,8 @@ Steps: 1. Open KVM -> 2. Create a VM file descriptor -> 3. Set up memory for VM 
 
 ## Kernel
 
+Linker script loads executable code at address 0x0, and global/static variables at 0x3000.
+
 Questions:
 
 1. How CPU distinguishes between kernel-mode and user-mode (rings?)

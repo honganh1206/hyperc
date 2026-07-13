@@ -1,7 +1,6 @@
 #ifndef KMALLOC_H
 #define KMALLOC_H
 
-#include <cstdint>
 #include <stdint.h>
 
 /* Initialize memory allocator? */
