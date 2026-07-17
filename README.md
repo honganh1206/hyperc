@@ -1,4 +1,4 @@
-# Build a hypervisor with a build-from-scratch simple kernel
+# A hypervisor with a simple build-from-scratch kernel
 
 ## VMM
 
@@ -24,8 +24,7 @@ Answers:
 
 1. Controlled by description privilege level (rings)
 
-### Syscalls
-
+### Registers
 We use the special register `efer` (collection of binary switches) to enable syscall/sysenter instruction.
 
 ```c
@@ -49,4 +48,9 @@ Each PDE is a 64-bit value with control bits in lower positions + physical addre
 bits 63-12         bits 11-9   bits 8-0
 ```
 
+## Sorted bins
+
+A storage structure to organize freed memory blocks using structured lists.
+
+The heap manager categorizes free memory chunks to distinct bins based on their sizes.
 
