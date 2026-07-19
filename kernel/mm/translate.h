@@ -4,7 +4,7 @@
 #include <stdint.h>
 // Protection flags
 #define PROT_R 1
-#define PORT_W 2
+#define PROT_W 2
 #define PROT_X 3 // Execute
 // Combination
 #define PROT_RW (PROT_R | PROT_W)
@@ -37,5 +37,8 @@
 void init_pagetable();
 
 uint64_t translate(void *vaddr, int usermode, int writable);
+uint64_t physical(void *vaddr);
+
+void add_trans_user(void* vaddr_, void* paddr_, int prot )
 
 #endif

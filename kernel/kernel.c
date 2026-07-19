@@ -1,5 +1,6 @@
 #include <mm/kmalloc.h>
 #include <mm/translate.h>
+#include <utils/string.h>
 #include <stdint.h>
 
 #define MSR_STAR  0xc0000081 /* legacy mode SYSCALL target, must have for compatibility */
@@ -50,8 +51,8 @@ void switch_user(uint64_t argc, char *argv[]) {
   uint64_t sp = physical(s);
 
   // Map memory for user access at sp
-  add_trans_user((void *)sp, (void *)sp, PROT_RW);
   // so user program can do read + write
+  add_trans_user((void *)sp, (void *)sp, PROT_RW);
 
   // Update arg pointers to point to user-accessible area instead of virtual
   // addresses Take the address of arg, subtract to 1st arg address, then

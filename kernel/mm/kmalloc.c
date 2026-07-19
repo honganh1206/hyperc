@@ -58,7 +58,7 @@ static inline void insert_sorted(struct chunk *c) {
 // Inline helps the compiler see the function body at call site
 static inline int invalid_chunk_size(uint64_t s) {
   if (s == 0) return 1;
-  if (s >= (1ull << 32)) return 1; // Way too large
+  if (s >= (1ull << 32)) return 1; // Exceed max chunk size
   if (s & 0xf) return 1;
   return 0;
 }
