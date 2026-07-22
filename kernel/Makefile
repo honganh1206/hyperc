@@ -3,7 +3,7 @@ TARGET := kernel.bin
 SRCS := entry.s kernel.c
 # Placeholder for loose .o files
 OBJS :=
-SUBOBJS := mm/mm.a utils/utils.a
+SUBOBJS := mm/mm.a utils/utils.a syscalls/syscalls.a
 
 
 # From left to right: 

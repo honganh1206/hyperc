@@ -39,6 +39,8 @@ sregs->efer = 0x500; // EFER_LME | EFER_LMA
 sregs->efer |= 0x1; // EFER_SCE
 ```
 
+For syscalls, we register the syscall handler via setting special registers named MSR (Model Specific Registers). After the setup, we can invoke the syscall instruction and the program will jump to the handler we registered.
+
 ### Page Directory Entry
 
 Each PDE is a 64-bit value with control bits in lower positions + physical address in upper bits
@@ -54,3 +56,6 @@ A storage structure to organize freed memory blocks using structured lists.
 
 The heap manager categorizes free memory chunks to distinct bins based on their sizes.
 
+### Modes
+
+Two modes (user vs. kernel) are distinguished by the dpl (ring)

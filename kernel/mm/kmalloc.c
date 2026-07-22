@@ -2,8 +2,14 @@
 #include <stdint.h>
 #include <utils/panic.h>
 #include <utils/string.h>
+#include "kmalloc.h"
 
 // Refer to a contiguous free range of memory
+// [struct chunk header: size, pad, next pointer]
+//                               ↑
+//                            Chunk offset
+//                               ↓
+//                         [usable memory starts here]
 struct kmalloc_arena {
   void *top; // Point to next available memory location, bumped after allocation
   uint64_t top_size; // Avaiable memory from top onwards
@@ -27,7 +33,7 @@ static struct kmalloc_arena arena;
 // Return a pointer to user memory, skip the chunk header (16 bits)
 #define chunk2mem(c) ((void *)((uint8_t *)(c) + offsetof(struct chunk, next)))
 
-// Get chunk metadata by going backward 16 bytes
+// Get chunk metadata by going backward 16 bytes (header)
 #define mem2chunk(m)                                                           \
   ((struct chunk *)((uint8_t *)(m) - offsetof(struct chunk, next)))
 
@@ -163,4 +169,18 @@ void *kmalloc(uint64_t len, int align) {
   // Populate all chunks with 0 for deterministic initial content
   memset(victim, 0, len);
   return victim;
+}
+
+void kfree(void *addr) {
+  if (addr == 0) return;
+  struct chunk* c = mem2chunk(addr);
+  if (invalid_chunk_size(c->size)) panic("kmalloc.c#kfree: invalid size");
+  if (c->size + (void*)c == arena.top) { // Align? Mem alloc pointer is pointing to next free alloc?
+    // Reset pointer to before alloc
+    arena.top = (void*)c;
+    arena.top_size += c->size;
+    c->size = 0;
+  }
+  // If not aligned insert remainder?
+  else insert_sorted(c);
 }

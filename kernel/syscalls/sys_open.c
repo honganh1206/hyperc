@@ -1,0 +1,17 @@
+#include <syscalls/sys_open.h>
+#include <mm/uaccess.h>
+#include <mm/translate.h>
+#include <mm/kmalloc.h>
+#include <utils/errno.h>
+
+int sys_open(const char *path) {
+    // Why check access?
+    if(!access_string_ok(path)) return -EFAULT;
+    // Why copy?
+    void *dst = copy_str_from_user(path);
+    if (dst == 0) return -ENOMEM;
+    // Do the hypercall to the hypervisor
+    int fd = hp_open(physical(dst));
+    kfree(dst);
+    return fd;
+}

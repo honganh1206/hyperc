@@ -1,4 +1,5 @@
 #include <mm/translate.h>
+#include <mm/kmalloc.h>
 #include <stdint.h>
 #include <utils/panic.h>
 
@@ -6,7 +7,7 @@
 // Extract the 9-bit indices to index the table entries
 #define PML4_OFFSET(v) _OFFSET(v, 39)
 #define PDP_OFFSET(v) _OFFSET(v, 30)
-#define PD0_OFFSET(v) _OFFSET(v, 21)
+#define PD_OFFSET(v) _OFFSET(v, 21)
 #define PT_OFFSET(v) _OFFSET(v, 12)
 
 /* Maps
@@ -14,7 +15,7 @@
  */
 void init_pagetable() {
   uint64_t *pml4;
-  // Store PML4 base address in register CR3
+  // Store PML4 base address in register CR3 (control register for setting paging attributes)
   asm("mov %[pml4], cr3" : [pml4] "=r"(pml4));
   // Start PDP table at offset 0x3 from PML4 base address
   // assuming pre-allocated memory at that offset
@@ -36,6 +37,7 @@ void init_pagetable() {
 // instead of moving the pointer to where this function is
 static inline uint64_t *get_pml4_addr() {
   uint64_t pml4;
+  // Load the PML4 table register cr3
   asm("mov %[pml4], cr3" : [pml4] "=r"(pml4));
   return (uint64_t *)(pml4 | KERNEL_BASE_OFFSET);
 }
@@ -73,17 +75,49 @@ uint64_t translate(void *vaddr, int usermode, int writable) {
 
   PAGING(&pml4[PML4_OFFSET(vaddr)], pdp);
   PAGING(&pdp[PDP_OFFSET(vaddr)], pd);
-  PAGING(&pml4[PD0_OFFSET(vaddr)], pt);
-  if (pd[PD0_OFFSET(vaddr)] & PDE64_PS)
+  PAGING(&pml4[PD_OFFSET(vaddr)], pt);
+  if (pd[PD_OFFSET(vaddr)] & PDE64_PS)
     // PD entry describes a huge (2 MiB) page
     // instead of pointing to a leaf PTE in the PT level
     // so we clear the low (right-side) 21 bits to compute the 2 MiB-aligned
     // physical base
     // (Why huge?) Map directly to a PD entry when PS bit is set
-    return (pd[PD0_OFFSET(vaddr)] & -0x200000) + ((uint64_t)vaddr & 0x1fffff);
+    return (pd[PD_OFFSET(vaddr)] & -0x200000) + ((uint64_t)vaddr & 0x1fffff);
   PAGING(&pt[PT_OFFSET(vaddr)], ret);
 #undef PAGING
   // Extract the offset inside 2 MiB region
   // Get the kernel virtual pointer (ret) to point the mapped physical base page
   return physical(ret) + ((uint64_t)vaddr & 0xfff);
+}
+
+void add_trans_user(void* vaddr_, void* paddr_, int prot) {
+  uint64_t vaddr = (uint64_t) vaddr_;
+  // Validation of vaddr should be done in sys_mmap
+  // so we can + should just panic here
+  if (!USER_MEM_RANGE_OK(vaddr)) panic("translate.c#add_trans_user: not allowed memory range");
+
+  // Extract the physical address without the base address?
+  uint64_t paddr = (uint64_t) paddr_ & ~KERNEL_BASE_OFFSET;
+
+  uint64_t* pml4 = get_pml4_addr(), *pdp, *pd, *pt;
+
+  // Allocate a new page table or retrieve an existing one
+  // and set flags for read/write/user-accessible
+#define PAGING(p, c) do { \
+  if (!(*p & PDE64_PRESENT)) { \
+      c = (uint64_t*) kmalloc(0x1000, MALLOC_PAGE_ALIGN); \
+      *p = PDE64_PRESENT | PDE64_RW | PDE64_USER | physical(c); \
+  } else { \
+      if (!(*p & PDE64_USER)) panic("translate.c#add_trans_user: invalid address"); \
+      c = (uint64_t*) ((*p & -0x1000) | KERNEL_BASE_OFFSET); \
+  } \
+} while(0);
+  PAGING(&pml4[PML4_OFFSET(vaddr)], pdp);
+  PAGING(&pdp[PDP_OFFSET(vaddr)], pd);
+  PAGING(&pd[PD_OFFSET(vaddr)], pt);
+#undef PAGING
+  // Set the perms?
+  pt[PT_OFFSET(vaddr)] = PDE64_PRESENT | paddr;
+  if (prot & PROT_R) pt[PT_OFFSET(vaddr)] |= PDE64_USER;
+  if (prot & PROT_W) pt[PT_OFFSET(vaddr)] |= PDE64_RW;
 }

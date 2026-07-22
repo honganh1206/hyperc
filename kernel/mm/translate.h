@@ -39,6 +39,6 @@ void init_pagetable();
 uint64_t translate(void *vaddr, int usermode, int writable);
 uint64_t physical(void *vaddr);
 
-void add_trans_user(void* vaddr_, void* paddr_, int prot )
+void add_trans_user(void* vaddr_, void* paddr_, int prot);
 
 #endif
