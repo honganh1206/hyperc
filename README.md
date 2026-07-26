@@ -12,6 +12,8 @@ Steps: 1. Open KVM -> 2. Create a VM file descriptor -> 3. Set up memory for VM 
 
 ## Kernel
 
+Flow: Initialize kernel space (page tables, perms) -> Map memory for user access at SP -> Copy args (program name, args, env vars) -> Execute program (Load binary -> Map program memory -> ??)
+
 Linker script loads executable code at address 0x0, and global/static variables at 0x3000.
 
 Questions:
@@ -59,3 +61,44 @@ The heap manager categorizes free memory chunks to distinct bins based on their 
 ### Modes
 
 Two modes (user vs. kernel) are distinguished by the dpl (ring)
+
+## ELF files
+
+Standard binary format for executables, shared libs and object files on UNIX-like systems.
+
+ELF header (overall structure) and Program header (How to load segment into memory)
+
+```
+ELF File Structure:
+┌─────────────────────┐
+│ Main Header (1)     │ ← Describes file overall
+├─────────────────────┤
+│ Program Header (1)  │ ← "Load this segment here"
+│ Program Header (2)  │ ← "Load this segment here"
+│ Program Header (3)  │ ← "Load this segment here"
+├─────────────────────┤
+│ Segment Data        │
+│ (Code, Data, etc.)  │
+└─────────────────────┘
+
+↓ Loader reads program headers ↓
+
+Memory Layout (Virtual Address Space):
+┌──────────────────────┐
+│ ... empty space ...  │
+├──────────────────────┤
+│ 0x400000: Segment 1  │ ← Placed here per Program Header 1
+│ (code/data)          │
+├──────────────────────┤
+│ ... gap ...          │
+├──────────────────────┤
+│ 0x600000: Segment 2  │ ← Placed here per Program Header 2
+│ (code/data)          │
+├──────────────────────┤
+│ ... more memory ...  │
+└──────────────────────┘
+```
+
+## ASLR
+
+ASLR (Address Space Layout Randomization) is a security technique that randomizes where code, data, and stack are placed in a process's memory each time it runs. 

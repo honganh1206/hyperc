@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "string.h"
 
 void *memset(void *b, int c, uint64_t len) {
     for (int i = 0; i < len; i++) {
@@ -22,6 +23,15 @@ void *memcpy(void *dst, const void *src, uint64_t n) {
     return dst;
 }
 
+int memcmp(const void *s1, const void *s2, uint64_t n) {
+    unsigned char u1, u2;
+    for(; n--; s1++, s2++) {
+        u1 = *(unsigned char *) s1;
+        u2 = *(unsigned char *) s2;
+        if (u1 != u2) return u1 - u2;
+    }
+    return 0;
+}
 uint64_t strnlen(const char *s, uint64_t maxlen) {
     uint64_t i = 0;
     while (i < maxlen) {
@@ -30,7 +40,6 @@ uint64_t strnlen(const char *s, uint64_t maxlen) {
     }
     return maxlen;
 }
-
 
 uint64_t strlen(const char *s) {
     return strnlen(s, (1ull << 63) - 1);

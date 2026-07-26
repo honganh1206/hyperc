@@ -2,6 +2,7 @@
 #include <mm/kmalloc.h>
 #include <stdint.h>
 #include <utils/panic.h>
+#include "translate.h"
 
 #define _OFFSET(v, bits) (((uint64_t)(v) >> bits) & 0x1ff)
 // Extract the 9-bit indices to index the table entries
@@ -90,6 +91,7 @@ uint64_t translate(void *vaddr, int usermode, int writable) {
   return physical(ret) + ((uint64_t)vaddr & 0xfff);
 }
 
+// Populate the tables (PML4, PDP, PD) and set permissions
 void add_trans_user(void* vaddr_, void* paddr_, int prot) {
   uint64_t vaddr = (uint64_t) vaddr_;
   // Validation of vaddr should be done in sys_mmap
@@ -109,15 +111,48 @@ void add_trans_user(void* vaddr_, void* paddr_, int prot) {
       *p = PDE64_PRESENT | PDE64_RW | PDE64_USER | physical(c); \
   } else { \
       if (!(*p & PDE64_USER)) panic("translate.c#add_trans_user: invalid address"); \
-      c = (uint64_t*) ((*p & -0x1000) | KERNEL_BASE_OFFSET); \
+      c = (uint64_t*) ((*p & -MALLOC_PAGE_ALIGN) | KERNEL_BASE_OFFSET); \
   } \
 } while(0);
   PAGING(&pml4[PML4_OFFSET(vaddr)], pdp);
   PAGING(&pdp[PDP_OFFSET(vaddr)], pd);
   PAGING(&pd[PD_OFFSET(vaddr)], pt);
 #undef PAGING
-  // Set the perms?
+
+  // Set up protection bits on page tables
   pt[PT_OFFSET(vaddr)] = PDE64_PRESENT | paddr;
   if (prot & PROT_R) pt[PT_OFFSET(vaddr)] |= PDE64_USER;
   if (prot & PROT_W) pt[PT_OFFSET(vaddr)] |= PDE64_RW;
+}
+
+int pf_to_prot(Elf64_Word pf) {
+  int ret = 0;
+  if(pf & PF_R) ret |= PROT_R;
+  if(pf & PF_W) ret |= PROT_W;
+  if(pf & PF_X) ret |= PROT_X;
+  return ret;
+}
+
+// Update the permissions of a page table entry
+int modify_permission(void *vaddr, int prot) {
+  uint64_t *pml4 = get_pml4_addr(), *pdp, *pd, *pt;
+  // Get the chuk that has the page?
+#define PAGING(p, c) do { \
+  if(!(*p & PDE64_PRESENT)) return -1; \
+  c = (uint64_t*) ((*p & -MALLOC_PAGE_ALIGN) | KERNEL_BASE_OFFSET); \
+} while(0);
+
+// Traverse through the nested page tables
+PAGING(&pml4[PML4_OFFSET(vaddr)], pdp);
+PAGING(&pdp[PDP_OFFSET(vaddr)], pd);
+PAGING(&pd[PD_OFFSET(vaddr)], pt);
+
+#undef PAGING
+  uint64_t* e = &pt[PT_OFFSET(vaddr)];
+  if(!(*e & PDE64_PRESENT)) return -1;
+  // Clear the user access (R) and RW bits (W)
+  *e &= ~(PDE64_USER | PDE64_RW);
+  if(prot & PROT_R) *e |= PDE64_USER;
+  if(prot & PROT_W) *e |= PDE64_RW;
+  return 0;
 }

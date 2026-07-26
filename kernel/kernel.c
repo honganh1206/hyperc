@@ -51,7 +51,7 @@ void switch_user(uint64_t argc, char *argv[]) {
   // Get the physical address of stack pointer
   uint64_t sp = physical(s);
 
-  // Map memory for user access at sp
+  // Map memory for user access at sp (user stack setup)
   // so user program can do read + write
   add_trans_user((void *)sp, (void *)sp, PROT_RW);
 

@@ -2,6 +2,7 @@
 #define TRANSLATE_H
 
 #include <stdint.h>
+#include <elf/elf.h>
 // Protection flags
 #define PROT_R 1
 #define PROT_W 2
@@ -40,5 +41,9 @@ uint64_t translate(void *vaddr, int usermode, int writable);
 uint64_t physical(void *vaddr);
 
 void add_trans_user(void* vaddr_, void* paddr_, int prot);
+
+// Convert ELF flags (common) to memory protection bits (CPU arch based)
+int pf_to_prot(Elf64_Word pf);
+int modify_permission(void *vaddr, int prot);
 
 #endif
