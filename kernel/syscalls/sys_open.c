@@ -1,4 +1,5 @@
 #include <syscalls/sys_open.h>
+#include <hypercalls/hp_open.h>
 #include <mm/uaccess.h>
 #include <mm/translate.h>
 #include <mm/kmalloc.h>

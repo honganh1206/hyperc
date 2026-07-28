@@ -34,7 +34,7 @@ int access_string_ok(const void *addr_) {
 
 void *copy_str_from_user(const char *s) {
     int len = strlen(s);
-    // Why +1?
+    // +1 for NULL terminator?
     void *dst = kmalloc(len + 1, MALLOC_NO_ALIGN);
     if (dst == 0) return 0;
     memcpy(dst, s, len + 1);

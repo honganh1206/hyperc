@@ -1,5 +1,6 @@
 #include <hypercalls/hp_read.h>
 #include <mm/kmalloc.h>
+#include <mm/translate.h>
 #include <hypercalls/hypercall_table.h>
 #include <hypercalls/hypercall.h>
 

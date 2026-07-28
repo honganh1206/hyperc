@@ -1,6 +1,8 @@
-#include<hypercalls/hp_read.h>
+#include <hypercalls/hp_read.h>
+#include <hypercalls/hp_lseek.h>
 #include <syscalls/sys_mmap.h>
 #include <mm/translate.h>
+#include <mm/mmap.h>
 #include <utils/misc.h>
 #include <utils/errno.h>
 

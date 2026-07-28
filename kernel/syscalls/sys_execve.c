@@ -1,11 +1,13 @@
 #include <syscalls/sys_execve.h>
 #include <syscalls/sys_open.h>
+#include <syscalls/sys_close.h>
 #include <hypercalls/hp_read.h>
 #include <syscalls/sys_mmap.h>
 #include <utils/errno.h>
 #include <mm/kmalloc.h>
 #include <mm/translate.h>
 #include <mm/mmap.h>
+#include <mm/uaccess.h>
 #include <elf/elf.h>
 #include <utils/string.h>
 #include <utils/misc.h>
@@ -90,6 +92,104 @@ static int load_binary(int fd, process *p) {
 
     // Allocate stack memory with read/write permission (add R/W to every byte?)
     if(mmap(st, p->stack_size, PROT_RW) != st) return -ENOMEM;
+    return 0;
+}
+
+// Check permissions of args and return counts
+static int check_and_get_count(char *const arr[]) {
+    // Array decays to a pointer when being passed to a function
+    if(!access_ok(VERIFY_READ, arr, 8)) return -EFAULT;
+    int i = 0;
+    while(*arr != 0) {
+        if(!access_string_ok(*arr)) return -EFAULT;
+        // Also used as a cursor
+        ++arr; // Move to point to argv[i]
+        ++i;
+        if(!access_ok(VERIFY_READ, arr, 8)) return -EFAULT;
+    }
+    return i;
+}
+
+// Track the stack pointer cursor
+// Stack growing downwards??
+#define STACK_ALLOC(sp, len) ({ sp -= len ; (uint64_t*) sp; })
+// Why?? rsp alignment by
+#define ROUNDDOWN(sp) sp &= -0x10
+
+// Genenrate ELF info of user program bin
+// Stack should look like this at the end
+// Higher Address
+//   0x7ffffffff000  ← initial stack_base
+//          ...
+//          ...
+//          [padding if odd count]
+         
+//   0x7fffffffXXX0  ← rsp (after alignment and setup)
+//          ┌─────────────────────────┐
+//          │      argc (3)           │  ← rsp points here
+//          ├─────────────────────────┤
+//          │  argv[0] (ptr to prog)  │
+//          ├─────────────────────────┤
+//          │  argv[1] (ptr to arg1)  │
+//          ├─────────────────────────┤
+//          │  argv[2] (ptr to arg2)  │
+//          ├─────────────────────────┤
+//          │      NULL (argv term)   │
+//          ├─────────────────────────┤
+//          │ envp[0] (ptr to PATH)   │
+//          ├─────────────────────────┤
+//          │ envp[1] (ptr to HOME)   │
+//          ├─────────────────────────┤
+//          │      NULL (envp term)   │
+//          ├─────────────────────────┤
+//          │   "program name\0"      │
+//          │   "arg1\0"              │
+//          │   "arg2\0"              │
+//          │   "PATH=.../bin\0"      │
+//          │   "HOME=/home/user\0"   │
+//          └─────────────────────────┘
+// Lower Address (heap grows upward from here)
+static int create_elf_info(process *p, char *const argv[], char *const envp[]) {
+    // Push strings first (why?)
+    int argc = check_and_get_count(argv);
+    if(argc < 0) return argc;
+    int envc = check_and_get_count(envp);
+    if(envc < 0) return envc;
+
+    // +2 for NULL terminators
+    char **copy = (char**) kmalloc((argc + envc + 2) * sizeof(char*), MALLOC_NO_ALIGN);
+    // Push envp in reverse order
+    for(int i = envc - 1; i >= 0; i--) {
+        uint64_t len = strlen(argv[i]) + 1;
+        // +1 leaves room for NULL
+        copy[argc + 1 + i] = (char*) STACK_ALLOC(p->rsp, len);
+        memcpy(copy[argc + 1 + i], envp[i], len);
+    }
+
+    // Push argv in reverse order
+    for(int i = argc - 1; i >= 0; i--) {
+        uint64_t len = strlen(argv[i]) + 1;
+        copy[i] = (char*) STACK_ALLOC(p->rsp, len);
+        memcpy(copy[i], argv[i], len);
+    }
+
+    // Program is happier is rsp is aligned -> Goal?
+    // Final rsp is 16-byte aligned
+    // so we calculate bytes to be copied -> round the rsp
+    ROUNDDOWN(p->rsp);
+
+    // If total count of pointers is odd, push extra 8 bytes for 16-byte alignment
+    if((argc + 1 + envc + 1 + 1) & 1) STACK_ALLOC(p->rsp, 8);
+
+    // Push envp and argv onto stack
+    for(int i = argc + envc + 1; i >= 0; i--)
+        *(char**) STACK_ALLOC(p->rsp, 8) = copy[i];
+
+    kfree(copy);
+
+    // Push argc to stack
+    *(uint64_t*) STACK_ALLOC(p->rsp, 8) = argc;
+
     return 0;
 }
 
