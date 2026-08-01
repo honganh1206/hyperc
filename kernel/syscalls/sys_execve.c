@@ -232,6 +232,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[]) {
         "xor r15, r15;"
         "xor rbp, rbp;"
         ".byte 0x48;"
+        // Move from ring 0 to ring 3
         "sysretq"
         // GCC extended-asm operand syntax: "template" : outputs : inputs : clobbers
         :: [entry]"r"(p.entry + p.load_addr), [rsp]"r"(p.rsp)

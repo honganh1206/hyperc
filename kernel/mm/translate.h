@@ -22,8 +22,10 @@
 
 #define KERNEL_PAGING_SIZE (0x200000) // Also the start of free memory
 #define MIN_MMAP_ADDR KERNEL_PAGING_SIZE
+
+// Start of kernel segment in memory
 #define KERNEL_BASE_OFFSET                                                     \
-  (0x8000000000llu) // Start of kernel segment in memory
+  (0x8000000000llu) 
 
 #define MIN_USER_MEM MIN_MMAP_ADDR
 

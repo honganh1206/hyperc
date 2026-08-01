@@ -1,4 +1,4 @@
-# A hypervisor with a simple build-from-scratch kernel
+# A hypervisor with a simple build-from-scratch guest kernel
 
 ## VMM
 
@@ -12,19 +12,18 @@ Steps: 1. Open KVM -> 2. Create a VM file descriptor -> 3. Set up memory for VM 
 
 ## Kernel
 
-Flow: Initialize kernel space (page tables, perms) -> Map memory for user access at SP -> Copy args (program name, args, env vars) -> Execute program (Load binary -> Map program memory -> ??)
+The kernel in this repository is a single-process, x86-64 guest kernel designed to run inside a KVM-based virtual machine.
 
-Linker script loads executable code at address 0x0, and global/static variables at 0x3000.
+The kernel is not bare-metal, since it depends on the VMM to prepare memory, CPU state, host I/O interface.
 
-Questions:
+The kernel initializes its space (page tables, perms) -> Map memory for user access at SP -> Copy args (program name, args, env vars) from the user program -> Execute the program (Load binary with the args on top of the kernel stack -> Guest kernel calls to VMM with syscalls)
 
-1. How CPU distinguishes between kernel-mode and user-mode (rings?)
-2. How could CPU transfer control to kernel when user invokes `syscall`? (`syscall` is the way to invoke kernel)
-3. How kernel switches between kernel and user?
+Linker script loads executable code at address 0x0 (top of the kernel stack), and global/static variables at 0x3000.
 
-Answers:
+How CPU distinguishes between kernel-mode and user-mode -> Controlled by description privilege level (rings). The CPU has two privilege contexts inside the VM: Guest kernel mode (ring 0) and guest user mode (ring 3).
 
-1. Controlled by description privilege level (rings)
+When the user programs invokes system calls, they use SYSCALL to go to guest ring 0, after that the kernel uses SYSRETQ to enter ring 3.
+
 
 ### Registers
 We use the special register `efer` (collection of binary switches) to enable syscall/sysenter instruction.
@@ -61,6 +60,12 @@ The heap manager categorizes free memory chunks to distinct bins based on their 
 ### Modes
 
 Two modes (user vs. kernel) are distinguished by the dpl (ring)
+
+## Virtual addresses
+
+A kernel virtual address points to a location inside the kernel address space. The addresses are used to access system data and hardware.
+
+The page tables (MMU) translate the virtual addresses to the physical ones BEFORE the processor reads/writes memory.
 
 ## ELF files
 

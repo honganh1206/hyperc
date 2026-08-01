@@ -61,8 +61,10 @@ uint64_t physical(void *vaddr_) {
  * return -1 if page not presented or permission not matched*/
 uint64_t translate(void *vaddr, int usermode, int writable) {
   uint64_t *pml4 = get_pml4_addr(), *pdp, *pd, *pt, *ret;
-  // Macro local to translate() only
-  // to avoid name collision and faster inline expansion?
+  // Macro to walk the virtual address through page tables
+  // and create a kernel virtual pointer pointing to a 4KB page frame.
+  // This macro is local to translate() only
+  // to avoid name collision and faster inline expansion.
 #define PAGING(p, c)                                                           \
   do {                                                                         \
     if (!(*p & PDE64_PRESENT))                                                 \
@@ -96,7 +98,8 @@ void add_trans_user(void* vaddr_, void* paddr_, int prot) {
   uint64_t vaddr = (uint64_t) vaddr_;
   // Validation of vaddr should be done in sys_mmap
   // so we can + should just panic here
-  if (!USER_MEM_RANGE_OK(vaddr)) panic("translate.c#add_trans_user: not allowed memory range");
+  if (!USER_MEM_RANGE_OK(vaddr)) 
+    panic("translate.c#add_trans_user: not allowed memory range");
 
   // Extract the physical address without the base address?
   uint64_t paddr = (uint64_t) paddr_ & ~KERNEL_BASE_OFFSET;
@@ -104,7 +107,6 @@ void add_trans_user(void* vaddr_, void* paddr_, int prot) {
   uint64_t* pml4 = get_pml4_addr(), *pdp, *pd, *pt;
 
   // Allocate a new page table or retrieve an existing one
-  // and set flags for read/write/user-accessible
 #define PAGING(p, c) do { \
   if (!(*p & PDE64_PRESENT)) { \
       c = (uint64_t*) kmalloc(0x1000, MALLOC_PAGE_ALIGN); \
