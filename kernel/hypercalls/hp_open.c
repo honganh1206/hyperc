@@ -4,5 +4,5 @@
 #include <hypercalls/hypercall.h>
 
 int hp_open(uint64_t paddr) {
-    return hypercall(NR_HP_OPEN, (uint32_t) paddr);
+    return hypercall(NR_HP_open, (uint32_t) paddr);
 }

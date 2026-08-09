@@ -1,5 +1,4 @@
 #include <syscalls/syscall_handler.h>
-#include <syscalls/syscall_handler.h>
 #include <utils/errno.h>
 #include <mm/translate.h>
 

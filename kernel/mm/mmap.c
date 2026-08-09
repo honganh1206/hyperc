@@ -5,8 +5,9 @@
 #include <utils/misc.h>
 #include <utils/errno.h>
 
-// Return virtual-to-physical, user-accessible page-aligned block of memory 
-// with flexible permissions to the user program.
+// Map files directly to the program's virtual memory space
+// so program can modify files.
+// Think of it like a shared window for the kernel to read/write from
 void *mmap(void *addr, uint64_t len, int prot) {
     // Second if check is for page alignment (0xfff = 4095, but should be 4096 as typical x86-64 page)
     if(len == 0 || len & 0xfff) panic("mmap.c: invalid length");

@@ -13,7 +13,7 @@ int hp_read(int fildes, uint64_t phy_addr, uint64_t nbyte) {
     kbuf[2] = nbyte;
 
     // Get the return address to the caller
-    int ret = hypercall(NR_HP_READ, physical(kbuf));
+    int ret = hypercall(NR_HP_read, physical(kbuf));
     kfree(kbuf);
     return ret;
 }

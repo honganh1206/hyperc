@@ -8,7 +8,7 @@ int hp_lseek(int fildes, uint32_t offset, int whence) {
     kbuf[0] = fildes;
     kbuf[1] = offset;
     kbuf[2] = whence;
-    int ret = hypercall(NR_HP_LSEEK, physical(kbuf));
+    int ret = hypercall(NR_HP_lseek, physical(kbuf));
     kfree(kbuf);
     return ret;
 }

@@ -80,7 +80,7 @@ int kernel_main(void *addr, uint64_t len, uint64_t argc, char *argv[]) {
   if (register_syscall() != 0)
     return 1;
   // Run the user program
-  // and the program uses syscalls to interact with the kernel
+  // and the program uses syscalls to interact with the VMM
   switch_user(argc, argv);
   return 0;
 }
