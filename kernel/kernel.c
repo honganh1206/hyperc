@@ -1,26 +1,32 @@
 #include <mm/kmalloc.h>
-#include <syscalls/sys_execve.h>
 #include <mm/translate.h>
-#include <utils/string.h>
 #include <stdint.h>
+#include <syscalls/sys_execve.h>
+#include <utils/string.h>
 
 // Model Specific Registers
-#define MSR_STAR  0xc0000081 /* legacy mode SYSCALL target, must have for compatibility */
-#define MSR_LSTAR 0xc0000082 /* Magic number: long mode SYSCALL target (See: https://codebrowser.dev/linux/linux/arch/x86/include/asm/msr-index.h.html#12) */
+#define MSR_STAR                                                               \
+  0xc0000081 /* legacy mode SYSCALL target, must have for compatibility */
+#define MSR_LSTAR                                                                                             \
+  0xc0000082                 /* Magic number: long mode SYSCALL target (See:                                  \
+                                https://codebrowser.dev/linux/linux/arch/x86/include/asm/msr-index.h.html#12) \
+                              */
 #define MSR_CSTAR 0xc0000083 /* compat mode SYSCALL target */
 #define MSR_SYSCALL_MASK 0xc0000084
 
 int register_syscall() {
   asm(
-      // Set kernel + user code/stack segment selectors for legacy 32-bit mode (have to)
-      "xor rax, rax;"          // Set RAX = 0x00000000
-      "mov rdx, 0x00200008;"   // Set RDX = 0x00200008
+      // Set kernel + user code/stack segment selectors for legacy 32-bit mode
+      // (have to)
+      "xor rax, rax;"         // Set RAX = 0x00000000
+      "mov rdx, 0x00200008;"  // Set RDX = 0x00200008
       "mov ecx, %[msr_star];" // Set ECX = 0xc0000081 (MSR_STAR ID)
 
       // Tell CPU which RFLAGS bits to clear when entering kernel mode
-      // 0x3f7fd5 clears: Carry, Auxiliary, Sign, Interrupt, Direction, IOPL, Overflow 
-      // Without the mask/Mask not set properly, kernel will inherit rflags set in user mode
-      // Most importantly: Clears IF (Interrupt Flag) to disable interrupts in kernel
+      // 0x3f7fd5 clears: Carry, Auxiliary, Sign, Interrupt, Direction, IOPL,
+      // Overflow Without the mask/Mask not set properly, kernel will inherit
+      // rflags set in user mode Most importantly: Clears IF (Interrupt Flag) to
+      // disable interrupts in kernel
       "mov eax, %[fmask];"     // EAX = 0x3f7fd5 (RFLAGS mask)
       "xor rdx, rdx;"          // RDX = 0x00000000
       "mov ecx, %[msr_fmask];" // ECX = 0xc0000084 (MSR_SYSCALL_MASK ID)
@@ -29,15 +35,17 @@ int register_syscall() {
       // Point CPU to kernel handler (syscall_entry.s) by pointing rip to it
       // Specify 64-bit kernel handler access
       // When user code executes SYSCALL, CPU jumps here
-      "lea rax, [rip + syscall_entry];" // RAX = address of syscall_entry (how to get from syscalls/syscall_entry.s?)
-                                        // function
+      "lea rax, [rip + syscall_entry];" // RAX = address of syscall_entry (how
+                                        // to get from
+                                        // syscalls/syscall_entry.s?) function
       "mov rdx, %[base] >> 32;"  // RDX = high 32 bits of KERNEL_BASE_OFFSET
       "mov ecx, %[msr_syscall];" // ECX = 0xc0000082 (MSR_LSTAR ID)
       "wrmsr;"                   // Write MSR_LSTAR
-      ::[msr_star]"i"(MSR_STAR),
-        [fmask]"i"(0x3f7fd5), [msr_fmask]"i"(MSR_SYSCALL_MASK),
-        [base]"i"(KERNEL_BASE_OFFSET), [msr_syscall]"i"(MSR_LSTAR)
-      : "rax", "rdx", "rcx" // RCX saves the return address (address of next instruction)
+      ::[msr_star] "i"(MSR_STAR),
+      [fmask] "i"(0x3f7fd5), [msr_fmask] "i"(MSR_SYSCALL_MASK),
+      [base] "i"(KERNEL_BASE_OFFSET), [msr_syscall] "i"(MSR_LSTAR)
+      : "rax", "rdx",
+        "rcx" // RCX saves the return address (address of next instruction)
   );
   return 0;
 }
