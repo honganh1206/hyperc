@@ -1,5 +1,11 @@
 # A hypervisor with a simple build-from-scratch guest kernel
 
+```sh
+make debug
+make # or make debug for reg dumping
+vmm/vmm.elf kernel/kernel.bin user/orw.elf /etc/os-release
+```
+
 ## VMM
 
 KVM = VM implemented natively in Linux kernel.
