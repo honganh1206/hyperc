@@ -1,7 +1,6 @@
 # A hypervisor with a simple build-from-scratch guest kernel
 
 ```sh
-make debug
 make # or make debug for reg dumping
 vmm/vmm.elf kernel/kernel.bin user/orw.elf /etc/os-release
 ```
@@ -30,8 +29,8 @@ How CPU distinguishes between kernel-mode and user-mode -> Controlled by descrip
 
 When the user programs invokes system calls, they use SYSCALL to go to guest ring 0, after that the kernel uses SYSRETQ to enter ring 3.
 
-
 ### Registers
+
 We use the special register `efer` (collection of binary switches) to enable syscall/sysenter instruction.
 
 ```c
@@ -112,4 +111,4 @@ Memory Layout (Virtual Address Space):
 
 ## ASLR
 
-ASLR (Address Space Layout Randomization) is a security technique that randomizes where code, data, and stack are placed in a process's memory each time it runs. 
+ASLR (Address Space Layout Randomization) is a security technique that randomizes where code, data, and stack are placed in a process's memory each time it runs.
