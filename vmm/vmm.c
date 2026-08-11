@@ -220,7 +220,7 @@ void copy_argv(VM *vm, int argc, char *argv[]) {
   })
   // Store pointers to guest memory
   for (int i = argc - 1; i >= 0; i--) {
-    int len = strlen(argv[1]) + 1;
+    int len = strlen(argv[i]) + 1;
     // Pointer to reserved slot in guest mem
     copy[i] = STACK_ALLOC(sp, len);
     // Copy argv elem to guest mem
@@ -256,44 +256,19 @@ int check_iopl(VM *vm) {
 
 void execute(VM *vm) {
   while (1) {
-#ifdef DEBUG
-    debug("KVM_RUN: entering guest\n");
-#endif
     if (ioctl(vm->vcpufd, KVM_RUN, NULL) < 0)
       pexit("ioctl(KVM_RUN)");
-#ifdef DEBUG
-    debug("KVM_RUN: exited with reason=%u\n", vm->run->exit_reason);
-#endif
     dump_regs(vm->vcpufd); // Display current reg state
     switch (vm->run->exit_reason) {
     case KVM_EXIT_HLT:
       // Done running
-#ifdef DEBUG
-      debug("KVM_EXIT_HLT: guest halted\n");
-#endif
       fprintf(stderr, "KVM_EXIT_HLT\n");
       return;
     case KVM_EXIT_IO:
       // Output
-#ifdef DEBUG
-      debug("KVM_EXIT_IO: direction=%s port=0x%x size=%u count=%u "
-            "data_offset=%llu\n",
-            vm->run->io.direction == KVM_EXIT_IO_OUT ? "out" : "in",
-            vm->run->io.port, vm->run->io.size, vm->run->io.count,
-            vm->run->io.data_offset);
-#endif
-      int iopl_allowed = check_iopl(vm);
-#ifdef DEBUG
-      debug("KVM_EXIT_IO: IOPL access %s\n",
-            iopl_allowed ? "allowed" : "denied");
-#endif
-      if (!iopl_allowed)
+      if (!check_iopl(vm))
         error("KVM_EXIT_IO\n");
       if (vm->run->io.port & HP_NR_MARK) {
-#ifdef DEBUG
-        debug("KVM_EXIT_IO: dispatching hypercall port=0x%x\n",
-              vm->run->io.port);
-#endif
         if (hp_handler(vm->run->io.port, vm) < 0)
           error("Hypercall failed\n");
       } else

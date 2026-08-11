@@ -30,23 +30,23 @@ typedef struct fd_handle {
 // Map kernel file descriptors to host file descriptors
 static fd_handle fd_map[MAX_FD + 1];
 
-// NOTE: The benefit(s) of using macros is that we don't have to care about
-// types
-#define MAY_INIT_FD_MAP()                                                      \
-  {                                                                            \
-    static int fd_map_init = 0;                                                \
-    if (!fd_map_init) {                                                        \
-      fd_map_init = 1;                                                         \
-      fd_map[0].real_fd = 0;                                                   \
-      fd_map[0].opening = 1;                                                   \
-      fd_map[1].real_fd = 1;                                                   \
-      fd_map[1].opening = 1;                                                   \
-      fd_map[2].real_fd = 2;                                                   \
-      fd_map[2].opening = 1;                                                   \
-      for (int i = 3; i <= MAX_FD; i++)                                        \
-        fd_map[i].opening = 0;                                                 \
-    }                                                                          \
+// NOTE: We cannot use macro here
+// since it generates block-scoped fd_map
+// instead of the shared one
+static inline void MAY_INIT_FD_MAP() {
+  static int fd_map_init = 0;
+  if (!fd_map_init) {
+    fd_map_init = 1;
+    fd_map[0].real_fd = 0;
+    fd_map[0].opening = 1;
+    fd_map[1].real_fd = 1;
+    fd_map[1].opening = 1;
+    fd_map[2].real_fd = 2;
+    fd_map[2].opening = 1;
+    for (int i = 3; i <= MAX_FD; i++)
+      fd_map[i].opening = 0;
   }
+}
 
 int hp_handler(uint16_t nr, VM *vm) {
   switch (nr) {
@@ -185,8 +185,8 @@ static int hp_handle_close(VM *vm) {
     int fd = FETCH_U32;
 
     PROCESS_ON_FD(do_close(&fd_map[fd]));
-
-  } THEN_RETURN(ret);
+  }
+  THEN_RETURN(ret);
   return 0;
 }
 
@@ -194,14 +194,14 @@ static int hp_handle_lseek(VM *vm) {
   static int ret = UNUSED_VAR;
   PROCESS {
     uint32_t offset = FETCH_U32;
-    const uint32_t *kbuf = (uint32_t*) MEM_AT(offset);
+    const uint32_t *kbuf = (uint32_t *)MEM_AT(offset);
     int fd = kbuf[0];
     uint32_t off = kbuf[1];
     int whence = kbuf[2];
 
     PROCESS_ON_FD(lseek(fd_map[fd].real_fd, off, whence));
-
-  } THEN_RETURN(ret);
+  }
+  THEN_RETURN(ret);
   return 0;
 }
 static int hp_handle_exit(VM *vm) {

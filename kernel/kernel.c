@@ -52,24 +52,17 @@ int register_syscall() {
 
 // Prepare kernel args for user space execution
 void switch_user(uint64_t argc, char *argv[]) {
-  // Get the end of last arg string and subtract start address of 1st argument
-  int total_len = (argv[argc - 1] + strlen(argv[argc - 1] + 1) - (char *)argv);
-  // temp area for putting user-accessible data (what?)...
+  int total_len = (argv[argc - 1] + strlen(argv[argc - 1]) + 1) - (char *)argv;
   char *s = kmalloc(total_len, MALLOC_PAGE_ALIGN);
-  // Get the physical address of stack pointer
   uint64_t sp = physical(s);
 
   // Map memory for user access at sp (user stack setup)
-  // so user program can do read + write
   add_trans_user((void *)sp, (void *)sp, PROT_RW);
 
-  // Update arg pointers to point to user-accessible area instead of virtual
-  // addresses Take the address of arg, subtract to 1st arg address, then
-  // increment by sp
+  // Update arg pointers to point to user-accessible area
   for (int i = 0; i < argc; i++)
     argv[i] = (char *)(argv[i] - (char *)argv + sp);
 
-  // Copy arguments to user-accesible area
   memcpy(s, argv, total_len);
 
   // Execute the program. Args from left to right:

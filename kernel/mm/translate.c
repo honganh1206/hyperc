@@ -79,7 +79,7 @@ uint64_t translate(void *vaddr, int usermode, int writable) {
 
   PAGING(&pml4[PML4_OFFSET(vaddr)], pdp);
   PAGING(&pdp[PDP_OFFSET(vaddr)], pd);
-  PAGING(&pml4[PD_OFFSET(vaddr)], pt);
+  PAGING(&pd[PD_OFFSET(vaddr)], pt);
   if (pd[PD_OFFSET(vaddr)] & PDE64_PS)
     // PD entry describes a huge (2 MiB) page
     // instead of pointing to a leaf PTE in the PT level

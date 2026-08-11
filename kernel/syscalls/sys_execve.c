@@ -240,7 +240,6 @@ int sys_execve(const char *path, char *const argv[], char *const envp[]) {
       "mov r11, 0x2;"                  // rflags?
       "mov rsp, %[rsp];"
       // Clean up registers (why?)
-
       "xor rax, rax;"
       "xor rbx, rbx;"
       "xor rdx, rdx;"
